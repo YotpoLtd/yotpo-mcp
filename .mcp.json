@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "yotpo": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/Users/rbarabash/Workspace/yotpo-mcp/dist/index.js"
+      ],
+      "env": {}
+    }
+  }
+}
