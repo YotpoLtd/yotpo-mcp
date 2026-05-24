@@ -16,7 +16,11 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
-  "keywords": ["mcp", "yotpo", "model-context-protocol"],
+  "keywords": [
+    "mcp",
+    "yotpo",
+    "model-context-protocol"
+  ],
   "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
@@ -30,6 +34,7 @@
     "eslint": "^9.27.0",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
+    "typescript-eslint": "^8.59.4",
     "vitest": "^3.1.3"
   }
 }
