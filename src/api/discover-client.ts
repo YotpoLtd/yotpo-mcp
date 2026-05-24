@@ -62,7 +62,7 @@ function serializeParams(
     } else if (typeof value === "number") {
       searchParams.set(key, String(value));
     } else {
-      searchParams.set(key, value as string);
+      searchParams.set(key, String(value));
     }
   }
 

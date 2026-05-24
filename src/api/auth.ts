@@ -14,6 +14,7 @@ export function createAuthClient(config: AuthConfig): {
   getToken: () => Promise<string>;
 } {
   let cache: TokenCache | null = null;
+  let inflight: Promise<TokenCache> | null = null;
 
   async function fetchToken(): Promise<TokenCache> {
     const url = `https://${config.domain}/oauth/token`;
@@ -41,9 +42,11 @@ export function createAuthClient(config: AuthConfig): {
       token_type: string;
     };
 
+    const expiresIn = data.expires_in ?? 3600;
+
     return {
       token: data.access_token,
-      expiresAt: Date.now() + (data.expires_in - 60) * 1000,
+      expiresAt: Date.now() + (expiresIn - 60) * 1000,
     };
   }
 
@@ -52,7 +55,13 @@ export function createAuthClient(config: AuthConfig): {
       return cache.token;
     }
 
-    cache = await fetchToken();
+    if (!inflight) {
+      inflight = fetchToken().finally(() => {
+        inflight = null;
+      });
+    }
+
+    cache = await inflight;
     return cache.token;
   }
 
