@@ -3,7 +3,24 @@ import express from 'express';
 import request from 'supertest';
 import { createApp } from '../../src/server';
 import { loadEnv } from '../../src/config/env';
-import { capabilities } from '../../src/capabilities/index';
+
+const MCP_HTTP_HEADERS = {
+  Accept: 'application/json, text/event-stream',
+  'Content-Type': 'application/json',
+};
+
+function initializeBody(requestId: number | string = 1) {
+  return {
+    jsonrpc: '2.0',
+    id: requestId,
+    method: 'initialize',
+    params: {
+      protocolVersion: '2025-03-26',
+      capabilities: {},
+      clientInfo: { name: 'integration-test', version: '1.0.0' },
+    },
+  };
+}
 
 // Mock the capabilities to prevent actual tool registrations
 vi.mock('../../src/capabilities/index', () => ({
@@ -36,30 +53,31 @@ describe('MCP Server Integration', () => {
 
   beforeAll(() => {
     process.env.NODE_ENV = 'test';
-    loadEnv();
-    app = createApp();
+    const env = loadEnv();
+    app = createApp(env);
   });
 
   describe('Authenticated Requests', () => {
-    it('should handle authenticated request with valid store ID', async () => {
+    it('should handle authenticated MCP initialize with valid store ID', async () => {
       const response = await request(app)
         .post('/mcp')
+        .set(MCP_HTTP_HEADERS)
         .set('x-introspection-store-id', 'test-store-123')
         .set('x-introspection-user-email', 'test-user@yotpo.com')
         .set('x-introspection-external-user-id', 'external-user-456')
+        .send(initializeBody())
         .expect(200);
 
-      expect(response.body).toBeDefined();
-      expect(response.body.context).toEqual(
-        expect.objectContaining({
-          storeId: 'test-store-123'
-        })
-      );
+      expect(response.headers['content-type']).toMatch(/text\/event-stream/);
+      expect(response.text).toContain('"jsonrpc":"2.0"');
+      expect(response.text).toContain('capabilities');
     });
 
     it('should reject request without store ID header', async () => {
       const response = await request(app)
         .post('/mcp')
+        .set(MCP_HTTP_HEADERS)
+        .send(initializeBody())
         .expect(401);
 
       expect(response.body.error).toEqual('Unauthorized');
@@ -71,38 +89,33 @@ describe('MCP Server Integration', () => {
 
       const response = await request(app)
         .post('/mcp')
+        .set(MCP_HTTP_HEADERS)
         .set('x-introspection-store-id', testStoreId)
+        .send(initializeBody())
         .expect(200);
 
-      expect(response.body.context).toEqual(
-        expect.objectContaining({
-          storeId: testStoreId
-        })
-      );
+      expect(response.headers['content-type']).toMatch(/text\/event-stream/);
+      expect(response.text.length).toBeGreaterThan(0);
     });
 
     it('should handle requests with partial optional headers', async () => {
       const response = await request(app)
         .post('/mcp')
+        .set(MCP_HTTP_HEADERS)
         .set('x-introspection-store-id', 'test-store-partial')
         .set('x-introspection-user-email', 'partial-user@yotpo.com')
+        .send(initializeBody())
         .expect(200);
 
-      expect(response.body).toBeDefined();
-      expect(response.body.context).toEqual(
-        expect.objectContaining({
-          storeId: 'test-store-partial',
-          authContext: expect.objectContaining({
-            storeId: 'test-store-partial'
-          })
-        })
-      );
+      expect(response.headers['content-type']).toMatch(/text\/event-stream/);
     });
 
     it('should handle invalid header values gracefully', async () => {
       const response = await request(app)
         .post('/mcp')
+        .set(MCP_HTTP_HEADERS)
         .set('x-introspection-store-id', '')
+        .send(initializeBody())
         .expect(401);
 
       expect(response.body.error).toEqual('Unauthorized');
@@ -111,23 +124,20 @@ describe('MCP Server Integration', () => {
   });
 
   describe('Authentication Context', () => {
-    it('should populate full authentication context', async () => {
+    it('should complete MCP initialization when full Kong headers are provided', async () => {
       const response = await request(app)
         .post('/mcp')
+        .set(MCP_HTTP_HEADERS)
         .set('x-introspection-store-id', 'context-test-store')
         .set('x-introspection-user-email', 'context-user@yotpo.com')
         .set('x-introspection-external-user-id', 'context-external-123')
         .set('x-introspection-agency-id', 'agency-456')
         .set('x-introspection-organization-key', 'org-789')
+        .send(initializeBody())
         .expect(200);
 
-      expect(response.body.context.authContext).toEqual({
-        storeId: 'context-test-store',
-        userEmail: 'context-user@yotpo.com',
-        externalUserId: 'context-external-123',
-        agencyId: 'agency-456',
-        organizationKey: 'org-789'
-      });
+      expect(response.text).toContain('"serverInfo"');
+      expect(response.text).toContain('"name":"yotpo-mcp"');
     });
   });
 
@@ -135,7 +145,9 @@ describe('MCP Server Integration', () => {
     it('should handle malformed headers', async () => {
       const response = await request(app)
         .post('/mcp')
+        .set(MCP_HTTP_HEADERS)
         .set('x-introspection-store-id', 'invalid store id with spaces')
+        .send(initializeBody())
         .expect(401);
 
       expect(response.body).toEqual({

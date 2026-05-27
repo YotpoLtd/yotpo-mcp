@@ -18,8 +18,19 @@ const envSchema = z.object({
   MCP_PORT: z.coerce.number().default(3000).describe("Port for MCP server"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info").describe("Logging verbosity level"),
 
+  /** Required when MCP_TRANSPORT is stdio (store identity from environment instead of Kong). */
+  YOTPO_STORE_ID: z.string().min(1).optional().describe("Store ID for stdio transport"),
+
   // Test Configuration
   NODE_ENV: z.enum(["development", "test", "production"]).default("development").describe("Current environment"),
+}).superRefine((data, ctx) => {
+  if (data.MCP_TRANSPORT === "stdio" && !data.YOTPO_STORE_ID?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "YOTPO_STORE_ID is required when MCP_TRANSPORT is stdio",
+      path: ["YOTPO_STORE_ID"],
+    });
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -82,9 +82,10 @@ export function createDiscoverClient(config: DiscoverClientConfig): DiscoverClie
     // Use provided or Kong-injected store ID
     const searchParams = serializeParams(params);
     const queryString = searchParams.toString();
+    const storeSegment = encodeURIComponent(config.storeId);
     const url = queryString
-      ? `${baseUrl}/${config.storeId}${path}?${queryString}`
-      : `${baseUrl}/${config.storeId}${path}`;
+      ? `${baseUrl}/${storeSegment}${path}?${queryString}`
+      : `${baseUrl}/${storeSegment}${path}`;
 
     try {
       const response = await fetch(url, {

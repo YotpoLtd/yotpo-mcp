@@ -96,7 +96,6 @@ export function kongAuthMiddleware() {
 
         // Customize error message based on error type
         const errorMessages: {[key: string]: string} = {
-          'MissingStoreIdentityError': 'Missing store identity',
           'InvalidStoreIdentityError': 'Invalid store identity format',
           'default': 'Invalid authentication context'
         };

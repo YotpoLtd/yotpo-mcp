@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import express, { Request, Response } from 'express';
 import { capabilities } from "./capabilities/index.js";
 import { loadEnv, type Env } from "./config/env.js";
@@ -29,14 +30,6 @@ If a tool returns an error, report the error clearly without retrying unless exp
 export function createServer(authContext: AuthContext): McpServer {
   const env = loadEnv();
 
-  if (!authContext.storeId) {
-    throw new Error('Missing store identity');
-  }
-
-  if (!/^[a-zA-Z0-9\-_]+$/.test(authContext.storeId)) {
-    throw new Error('Invalid store identity format');
-  }
-
   const discoverClient = createDiscoverClient({
     storeId: authContext.storeId,
     baseUrl: env.DISCOVER_API_BASE_URL,
@@ -59,30 +52,34 @@ export function createApp(_env: Env) {
   void _env;
   const app = express();
 
+  app.use(express.json());
   app.use(kongAuthMiddleware());
 
   app.post('/mcp', async (req: Request, res: Response) => {
-    try {
-      const authContext = (req as Request & { authContext: AuthContext }).authContext;
-      createServer(authContext);
-
-      res.status(200).json({
-        context: {
-          storeId: authContext.storeId,
-          authContext: {
-            storeId: authContext.storeId,
-            userEmail: authContext.userEmail,
-            externalUserId: authContext.externalUserId,
-            agencyId: authContext.agencyId,
-            organizationKey: authContext.organizationKey,
-          },
-        },
-      });
-    } catch (error) {
+    const authContext = (req as Request & { authContext?: AuthContext }).authContext;
+    if (!authContext) {
       res.status(401).json({
         error: 'Unauthorized',
-        message: error instanceof Error ? error.message : 'Authentication failed',
+        message: 'Missing authentication context',
       });
+      return;
+    }
+
+    try {
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+      });
+      const server = createServer(authContext);
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+    } catch (error) {
+      console.error('MCP HTTP handler error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: 'Internal Server Error',
+          message: error instanceof Error ? error.message : 'MCP request failed',
+        });
+      }
     }
   });
 

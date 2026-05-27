@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createDiscoverClient } from "./discover-client.js";
 
-const mockGetToken = vi.fn().mockResolvedValue("test-token");
 const mockFetch = vi.fn();
 
 vi.stubGlobal("fetch", mockFetch);
@@ -28,7 +27,6 @@ function mockErrorResponse(status: number, body: string) {
 describe("discover-client", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetToken.mockResolvedValue("test-token");
   });
 
   describe("URL construction", () => {
