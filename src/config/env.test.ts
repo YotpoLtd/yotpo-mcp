@@ -5,9 +5,9 @@ describe("loadEnv", () => {
   const validEnv = {
     YOTPO_AUTH0_DOMAIN: "yotpo.auth0.com",
     YOTPO_AUTH0_CLIENT_ID: "test-client-id",
-    YOTPO_AUTH0_CLIENT_SECRET: "test-client-secret",
     YOTPO_AUTH0_AUDIENCE: "https://api.yotpo.com",
-    YOTPO_STORE_ID: "store-123",
+    DISCOVER_API_BASE_URL: "https://api.yotpo.com/discover/v3/stores",
+    MCP_BASE_URL: "https://mcp.yotpo.com",
   };
 
   let originalEnv: NodeJS.ProcessEnv;
@@ -24,7 +24,7 @@ describe("loadEnv", () => {
     process.env = { ...validEnv };
     const env = loadEnv();
     expect(env.YOTPO_AUTH0_DOMAIN).toBe("yotpo.auth0.com");
-    expect(env.YOTPO_STORE_ID).toBe("store-123");
+    expect(env.DISCOVER_API_BASE_URL).toBe("https://api.yotpo.com/discover/v3/stores");
   });
 
   it("throws when YOTPO_AUTH0_DOMAIN is missing", () => {
@@ -39,20 +39,20 @@ describe("loadEnv", () => {
     expect(() => loadEnv()).toThrow("Invalid environment configuration");
   });
 
-  it("throws when YOTPO_AUTH0_CLIENT_SECRET is missing", () => {
-    const { YOTPO_AUTH0_CLIENT_SECRET: _, ...rest } = validEnv;
+  it("throws when DISCOVER_API_BASE_URL is missing", () => {
+    const { DISCOVER_API_BASE_URL: _, ...rest } = validEnv;
+    process.env = { ...rest };
+    expect(() => loadEnv()).toThrow("Invalid environment configuration");
+  });
+
+  it("throws when MCP_BASE_URL is missing", () => {
+    const { MCP_BASE_URL: _, ...rest } = validEnv;
     process.env = { ...rest };
     expect(() => loadEnv()).toThrow("Invalid environment configuration");
   });
 
   it("throws when YOTPO_AUTH0_AUDIENCE is missing", () => {
     const { YOTPO_AUTH0_AUDIENCE: _, ...rest } = validEnv;
-    process.env = { ...rest };
-    expect(() => loadEnv()).toThrow("Invalid environment configuration");
-  });
-
-  it("throws when YOTPO_STORE_ID is missing", () => {
-    const { YOTPO_STORE_ID: _, ...rest } = validEnv;
     process.env = { ...rest };
     expect(() => loadEnv()).toThrow("Invalid environment configuration");
   });

@@ -6,8 +6,8 @@ const mockFetch = vi.fn();
 
 vi.stubGlobal("fetch", mockFetch);
 
-function createClient(storeId = "store-123") {
-  return createDiscoverClient({ storeId, getToken: mockGetToken });
+function createClient(storeId = "my-store") {
+  return createDiscoverClient({ storeId });
 }
 
 function mockSuccessResponse(data: unknown = { ok: true }) {
@@ -65,31 +65,8 @@ describe("discover-client", () => {
     });
   });
 
-  describe("Authorization header", () => {
-    it("attaches Bearer token from getToken", async () => {
-      mockSuccessResponse();
-      const client = createClient();
-
-      await client.getBrandIdentity();
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          headers: { Authorization: "Bearer test-token" },
-        })
-      );
-    });
-
-    it("calls getToken on each request", async () => {
-      mockSuccessResponse();
-      const client = createClient();
-
-      await client.getBrandIdentity();
-      await client.listPrompts();
-
-      expect(mockGetToken).toHaveBeenCalledTimes(2);
-    });
-  });
+  // Authorization header tests removed as per OAuth Pivot design
+  // We no longer use token injection, relying on Kong headers instead
 
   describe("query param serialization", () => {
     it("serializes arrays as comma-separated values", async () => {

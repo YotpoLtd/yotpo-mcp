@@ -1,6 +1,6 @@
 export interface DiscoverClientConfig {
+  baseUrl?: string;
   storeId: string;
-  getToken: () => Promise<string>;
 }
 
 export interface ListPromptsParams {
@@ -70,32 +70,44 @@ function serializeParams(
 }
 
 export function createDiscoverClient(config: DiscoverClientConfig): DiscoverClient {
-  const baseUrl = `https://api.yotpo.com/discover/v3/stores/${config.storeId}`;
+  // Use environment or default base URL, with support for VPC-internal calls
+  const baseUrl = config.baseUrl ||
+    process.env.DISCOVER_API_BASE_URL ||
+    'https://api.yotpo.com/discover/v3/stores';
 
   async function request(
     path: string,
     params?: Record<string, unknown>
   ): Promise<unknown> {
-    const token = await config.getToken();
+    // Use provided or Kong-injected store ID
     const searchParams = serializeParams(params);
     const queryString = searchParams.toString();
-    const url = queryString ? `${baseUrl}${path}?${queryString}` : `${baseUrl}${path}`;
+    const url = queryString
+      ? `${baseUrl}/${config.storeId}${path}?${queryString}`
+      : `${baseUrl}/${config.storeId}${path}`;
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          // Accept header for content negotiation
+          'Accept': 'application/json',
+        },
+      });
 
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(
-        `Discover API error: ${response.status} ${body}`
-      );
+      if (!response.ok) {
+        const body = await response.text();
+        throw new Error(
+          `Discover API error: ${response.status} ${body}`
+        );
+      }
+
+      return response.json();
+    } catch (error) {
+      // Standardized error handling
+      console.error('Discover API request failed:', error);
+      throw error;
     }
-
-    return response.json();
   }
 
   return {
