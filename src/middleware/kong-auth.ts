@@ -1,3 +1,4 @@
+import type { IncomingHttpHeaders } from 'http';
 import { Request, Response, NextFunction } from 'express';
 
 /**
@@ -12,6 +13,22 @@ export interface AuthContext {
   readonly organizationKey?: string;
 }
 
+/**
+ * Introspection header names forwarded from Kong / edge for authentication context
+ */
+const KONG_HEADERS = {
+  STORE_ID: 'x-introspection-store-id',
+  USER_EMAIL: 'x-introspection-user-email',
+  EXTERNAL_USER_ID: 'x-introspection-external-user-id',
+  AGENCY_ID: 'x-introspection-agency-id',
+  ORGANIZATION_KEY: 'x-introspection-organization-key',
+} as const;
+
+function normalizeHeaderValue(value: IncomingHttpHeaders[string]): string | undefined {
+  if (value === undefined) return undefined;
+  const v = Array.isArray(value) ? value[0] : value;
+  return typeof v === 'string' ? v : undefined;
+}
 
 /**
  * Authentication Context Extraction Error
@@ -34,12 +51,11 @@ export class AuthContextExtractionError extends Error {
 export function extractAuthContext(req: Request): AuthContext {
   const headers = req.headers;
 
-  // Extract store ID (mandatory field)
-  const storeId = headers['x-introspection-store-id'];
+  // Extract store ID (mandatory field); duplicate headers can surface as string[]
+  const storeId = normalizeHeaderValue(headers[KONG_HEADERS.STORE_ID]);
 
   // First check for missing store ID
   if (!storeId ||
-      (typeof storeId !== 'string') ||
       storeId.trim() === '' ||
       !/^[a-zA-Z0-9\-_]+$/.test(storeId)) {
     const error = new AuthContextExtractionError('Invalid store identity');
@@ -49,16 +65,16 @@ export function extractAuthContext(req: Request): AuthContext {
 
   // Safely extract optional headers
   const safeExtract = (headerKey: string): string | undefined => {
-    const value = headers[headerKey];
-    return value && typeof value === 'string' ? value : undefined;
+    const value = normalizeHeaderValue(headers[headerKey]);
+    return value && value.trim() !== '' ? value : undefined;
   };
 
   return {
-    storeId: storeId as string,
-    userEmail: safeExtract('x-introspection-user-email'),
-    externalUserId: safeExtract('x-introspection-external-user-id'),
-    agencyId: safeExtract('x-introspection-agency-id'),
-    organizationKey: safeExtract('x-introspection-organization-key')
+    storeId,
+    userEmail: safeExtract(KONG_HEADERS.USER_EMAIL),
+    externalUserId: safeExtract(KONG_HEADERS.EXTERNAL_USER_ID),
+    agencyId: safeExtract(KONG_HEADERS.AGENCY_ID),
+    organizationKey: safeExtract(KONG_HEADERS.ORGANIZATION_KEY),
   };
 }
 

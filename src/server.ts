@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import express, { Request, Response } from 'express';
 import { capabilities } from "./capabilities/index.js";
-import { loadEnv } from "./config/env.js";
+import { loadEnv, type Env } from "./config/env.js";
 import { createDiscoverClient } from "./api/discover-client.js";
 import { registerDiscoverCapabilities } from "./capabilities/discover/index.js";
 import { AuthContext, kongAuthMiddleware } from "./middleware/kong-auth.js";
@@ -55,7 +55,8 @@ export function createServer(authContext: AuthContext): McpServer {
   return server;
 }
 
-export function createApp() {
+export function createApp(_env: Env) {
+  void _env;
   const app = express();
 
   app.use(kongAuthMiddleware());
