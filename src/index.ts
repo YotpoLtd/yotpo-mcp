@@ -6,9 +6,13 @@ import { loadEnv } from "./config/env.js";
 
 async function main(): Promise<void> {
   const env = loadEnv();
-  const server = createServer();
 
   if (env.MCP_TRANSPORT === "stdio") {
+    const storeId = process.env.YOTPO_STORE_ID;
+    if (!storeId) {
+      throw new Error("YOTPO_STORE_ID is required for stdio transport");
+    }
+    const server = createServer({ storeId });
     const transport = new StdioServerTransport();
     await server.connect(transport);
   } else {

@@ -1,4 +1,4 @@
-import { Request } from 'express';
+import { Request, Response, NextFunction } from 'express';
 
 /**
  * Represents the authentication context extracted from Kong headers
@@ -68,7 +68,7 @@ export function extractAuthContext(req: Request): AuthContext {
  * @returns Middleware function that adds authContext to request
  */
 export function kongAuthMiddleware() {
-  return (req: Request, res: Express.Response, next: Express.NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     try {
       const authContext = extractAuthContext(req);
       (req as unknown as { authContext: AuthContext }).authContext = authContext;
