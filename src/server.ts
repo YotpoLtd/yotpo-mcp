@@ -86,7 +86,7 @@ export function createServer(authContext: AuthContext): McpServer {
   return server;
 }
 
-export function createApp(env: any) {
+export function createApp() {
   const app = express();
 
   // Use Kong authentication middleware
@@ -95,8 +95,8 @@ export function createApp(env: any) {
   // MCP endpoint
   app.post('/mcp', async (req, res) => {
     try {
-      const authContext = (req as any).authContext;
-      const server = createServer(authContext);
+      const authContext = (req as unknown as { authContext: AuthContext }).authContext;
+      createServer(authContext);
 
       // In a real implementation, this would use a proper transport mechanism
       const response = {

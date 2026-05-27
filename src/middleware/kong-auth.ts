@@ -12,16 +12,6 @@ export interface AuthContext {
   readonly organizationKey?: string;
 }
 
-/**
- * Headers used by Kong for authentication context
- */
-const KONG_HEADERS = {
-  STORE_ID: 'x-yotpo-store-id',
-  USER_EMAIL: 'x-yotpo-user-email',
-  EXTERNAL_USER_ID: 'x-yotpo-external-user-id',
-  AGENCY_ID: 'x-yotpo-agency-id',
-  ORGANIZATION_KEY: 'x-yotpo-organization-key'
-} as const;
 
 /**
  * Authentication Context Extraction Error
@@ -81,7 +71,7 @@ export function kongAuthMiddleware() {
   return (req: Request, res: Express.Response, next: Express.NextFunction) => {
     try {
       const authContext = extractAuthContext(req);
-      (req as any).authContext = authContext;
+      (req as unknown as { authContext: AuthContext }).authContext = authContext;
       next();
     } catch (error) {
       if (error instanceof AuthContextExtractionError) {

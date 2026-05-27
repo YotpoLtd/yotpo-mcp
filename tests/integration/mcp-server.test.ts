@@ -35,10 +35,9 @@ describe('MCP Server Integration', () => {
   let app: express.Application;
 
   beforeAll(() => {
-    // Load environment configuration in test mode
     process.env.NODE_ENV = 'test';
-    const env = loadEnv();
-    app = createApp(env);
+    loadEnv();
+    app = createApp();
   });
 
   describe('Authenticated Requests', () => {
