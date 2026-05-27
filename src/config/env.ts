@@ -1,22 +1,48 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  YOTPO_APP_KEY: z.string().optional(),
-  YOTPO_SECRET_KEY: z.string().optional(),
-  MCP_TRANSPORT: z.enum(["stdio", "sse"]).default("stdio"),
-  MCP_PORT: z.coerce.number().default(3000),
-  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  // OAuth and API Configuration
+  DISCOVER_API_BASE_URL: z.string().url().describe("Base URL for the Discover API"),
+  MCP_BASE_URL: z.string().url().describe("Base URL for the MCP server"),
+
+  // Kong Configuration
+  KONG_ADMIN_URL: z.string().url().optional().describe("Optional Kong admin URL for API gateway configuration"),
+
+  // System Configuration
+  MCP_TRANSPORT: z.enum(["stdio", "sse"]).default("stdio").describe("Transport mechanism for MCP"),
+  MCP_PORT: z.coerce.number().default(3000).describe("Port for MCP server"),
+  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info").describe("Logging verbosity level"),
+
+  /** Required when MCP_TRANSPORT is stdio (store identity from environment instead of Kong). */
+  YOTPO_STORE_ID: z.string().min(1).optional().describe("Store ID for stdio transport"),
+
+  // Test Configuration
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development").describe("Current environment"),
+}).superRefine((data, ctx) => {
+  if (data.MCP_TRANSPORT === "stdio" && !data.YOTPO_STORE_ID?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "YOTPO_STORE_ID is required when MCP_TRANSPORT is stdio",
+      path: ["YOTPO_STORE_ID"],
+    });
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;
 
 export function loadEnv(): Env {
   const result = envSchema.safeParse(process.env);
+
   if (!result.success) {
     const issues = result.error.issues
-      .map((i) => `  ${i.path.join(".")}: ${i.message}`)
+      .map((i) => {
+        const path = i.path.join(".");
+        return `  ${path ? path + ": " : ""}${i.message}`;
+      })
       .join("\n");
+
     throw new Error(`Invalid environment configuration:\n${issues}`);
   }
+
   return result.data;
 }
