@@ -65,11 +65,11 @@ export function createApp(_env: Env) {
       return;
     }
 
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+    });
+    const server = createServer(authContext);
     try {
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined,
-      });
-      const server = createServer(authContext);
       await server.connect(transport);
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
@@ -79,6 +79,12 @@ export function createApp(_env: Env) {
           error: 'Internal Server Error',
           message: error instanceof Error ? error.message : 'MCP request failed',
         });
+      }
+    } finally {
+      try {
+        await server.close();
+      } catch (closeError) {
+        console.error('MCP server shutdown error:', closeError);
       }
     }
   });

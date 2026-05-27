@@ -54,10 +54,13 @@ export function extractAuthContext(req: Request): AuthContext {
   // Extract store ID (mandatory field); duplicate headers can surface as string[]
   const storeId = normalizeHeaderValue(headers[KONG_HEADERS.STORE_ID]);
 
+  // Restrict to URL-safe opaque IDs: alphanumeric segments separated by single hyphens (no underscores).
+  const storeIdPattern = /^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$/;
+
   // First check for missing store ID
   if (!storeId ||
       storeId.trim() === '' ||
-      !/^[a-zA-Z0-9\-_]+$/.test(storeId)) {
+      !storeIdPattern.test(storeId)) {
     const error = new AuthContextExtractionError('Invalid store identity');
     error.name = 'InvalidStoreIdentityError';
     throw error;

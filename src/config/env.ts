@@ -5,11 +5,6 @@ const envSchema = z.object({
   DISCOVER_API_BASE_URL: z.string().url().describe("Base URL for the Discover API"),
   MCP_BASE_URL: z.string().url().describe("Base URL for the MCP server"),
 
-  // Auth Configuration
-  YOTPO_AUTH0_DOMAIN: z.string().min(1).describe("Auth0 domain for authentication"),
-  YOTPO_AUTH0_CLIENT_ID: z.string().min(1).describe("Client ID for Auth0 authentication"),
-  YOTPO_AUTH0_AUDIENCE: z.string().min(1).describe("Audience for Auth0 token"),
-
   // Kong Configuration
   KONG_ADMIN_URL: z.string().url().optional().describe("Optional Kong admin URL for API gateway configuration"),
 
